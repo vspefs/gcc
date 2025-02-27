@@ -56,8 +56,8 @@ extern void deps_add_module_target (struct mkdeps *, const char *module,
 				    const char *cmi, bool is_header,
 				    bool is_exported);
 
-/* Adds a module dependency.  The module name is copied.  */
-extern void deps_add_module_dep (struct mkdeps *, const char *module);
+/* Adds a module dependency.  The cmi name is copied.  */
+extern void deps_add_module_dep (struct mkdeps *, const char *cmi);
 
 /* Add a structured dependency target.  */
 extern void fdeps_add_target (struct mkdeps *, const char *, bool);
