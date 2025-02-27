@@ -168,6 +168,7 @@ munge (const char *str, const char *trail = nullptr)
 		buf[dst++] = '\\';
 	      /* FALLTHROUGH  */
 
+	    case ':':
 	    case '#':
 	      buf[dst++] = '\\';
 	      /* FALLTHROUGH  */
@@ -365,9 +366,9 @@ deps_add_module_target (struct mkdeps *d, const char *m,
 /* Add a new module dependency.  M is the module name.  */
 
 void
-deps_add_module_dep (struct mkdeps *d, const char *m)
+deps_add_module_dep (struct mkdeps *d, const char *cmi)
 {
-  d->modules.push (xstrdup (m));
+  d->modules.push (xstrdup (cmi));
 }
 
 /* Write NAME, with a leading space to FP, a Makefile.  Advance COL as
@@ -431,85 +432,32 @@ make_write (const cpp_reader *pfile, FILE *fp, unsigned int colmax)
   if (d->deps.size ())
     {
       column = make_write_vec (d->targets, fp, 0, colmax, d->quote_lwm);
-      if (write_make_modules_deps && d->cmi_name)
-	column = make_write_name (d->cmi_name, fp, column, colmax);
       fputs (":", fp);
       column++;
-      make_write_vec (d->deps, fp, column, colmax);
+      column = make_write_vec (d->deps, fp, column, colmax);
+      if (write_make_modules_deps && !d->cmi_name)
+	{
+	  fputs ("|", fp);
+	  column++;
+	  make_write_vec (d->modules, fp, column, colmax);
+	}
       fputs ("\n", fp);
       if (CPP_OPTION (pfile, deps.phony_targets))
 	for (unsigned i = 1; i < d->deps.size (); i++)
 	  fprintf (fp, "%s:\n", munge (d->deps[i]));
     }
 
-  if (!write_make_modules_deps)
+  if (!write_make_modules_deps || !d->cmi_name)
     return;
 
-  if (d->modules.size ())
-    {
-      column = make_write_vec (d->targets, fp, 0, colmax, d->quote_lwm);
-      if (d->cmi_name)
-	column = make_write_name (d->cmi_name, fp, column, colmax);
-      fputs (":", fp);
-      column++;
-      column = make_write_vec (d->modules, fp, column, colmax, 0, ".c++-module");
-      fputs ("\n", fp);
-    }
-
-  if (d->module_name)
-    {
-      if (d->cmi_name)
-	{
-	  /* module-name : cmi-name */
-	  column = make_write_name (d->module_name, fp, 0, colmax,
-				    true, ".c++-module");
-	  const char *module_basename = nullptr;
-	  if (d->is_header_unit)
-	    {
-	      /* Also emit a target for the include name, so for #include
-		 <iostream> you'd make iostream.c++-header-unit, regardless of
-		 what actual directory iostream lives in.  We reconstruct the
-		 include name by skipping the directory where we found it.  */
-	      auto *dir = _cpp_get_file_dir (pfile->main_file);
-	      gcc_assert (!strncmp (d->module_name, dir->name, dir->len));
-	      module_basename = (d->module_name + dir->len + 1);
-	      column = make_write_name (module_basename, fp, column, colmax,
-					true, ".c++-header-unit");
-	    }
-	  fputs (":", fp);
-	  column++;
-	  column = make_write_name (d->cmi_name, fp, column, colmax);
-	  fputs ("\n", fp);
-
-	  column = fprintf (fp, ".PHONY:");
-	  column = make_write_name (d->module_name, fp, column, colmax,
-				    true, ".c++-module");
-	  if (module_basename)
-	    column = make_write_name (module_basename, fp, column, colmax,
-				      true, ".c++-header-unit");
-	  fputs ("\n", fp);
-	}
-
-      if (d->cmi_name && !d->is_header_unit)
-	{
-	  /* An order-only dependency.
-	      cmi-name :| first-target
-	     We can probably drop this this in favour of Make-4.3's grouped
-	      targets '&:'  */
-	  column = make_write_name (d->cmi_name, fp, 0, colmax);
-	  fputs (":|", fp);
-	  column++;
-	  column = make_write_name (d->targets[0], fp, column, colmax);
-	  fputs ("\n", fp);
-	}
-    }
-
-  if (d->modules.size ())
-    {
-      column = fprintf (fp, "CXX_IMPORTS +=");
-      make_write_vec (d->modules, fp, column, colmax, 0, ".c++-module");
-      fputs ("\n", fp);
-    }
+  column = make_write_name (d->cmi_name, fp, 0, colmax);
+  fputs (":", fp);
+  column = make_write_vec (d->deps, fp, column, colmax);
+  column = make_write_vec (d->modules, fp, column, colmax);
+  fputs ("|", fp);
+  column++;
+  make_write_vec (d->targets, fp, column, colmax);
+  fputs ("\n", fp);
 }
 
 /* Write out dependencies according to the selected format (which is
