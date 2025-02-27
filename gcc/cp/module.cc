@@ -21434,7 +21434,8 @@ preprocessed_module (cpp_reader *reader)
 					module->is_header (),
 					module->is_exported ());
 	      else
-		deps_add_module_dep (deps, module->get_flatname ());
+		deps_add_module_dep (deps,
+				     maybe_add_cmi_prefix (module->filename));
 	    }
 	}
     }
