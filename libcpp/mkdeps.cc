@@ -435,7 +435,7 @@ make_write (const cpp_reader *pfile, FILE *fp, unsigned int colmax)
       fputs (":", fp);
       column++;
       column = make_write_vec (d->deps, fp, column, colmax);
-      if (write_make_modules_deps && !d->cmi_name)
+      if (write_make_modules_deps)
 	{
 	  fputs ("|", fp);
 	  column++;
