@@ -6415,7 +6415,7 @@ cxx_eval_store_expression (const constexpr_ctx *ctx, tree t,
 	  break;
 
 	case REALPART_EXPR:
-	  gcc_assert (probe == target);
+	  gcc_assert (refs->is_empty ());
 	  vec_safe_push (refs, NULL_TREE);
 	  vec_safe_push (refs, probe);
 	  vec_safe_push (refs, TREE_TYPE (probe));
@@ -6423,7 +6423,7 @@ cxx_eval_store_expression (const constexpr_ctx *ctx, tree t,
 	  break;
 
 	case IMAGPART_EXPR:
-	  gcc_assert (probe == target);
+	  gcc_assert (refs->is_empty ());
 	  vec_safe_push (refs, NULL_TREE);
 	  vec_safe_push (refs, probe);
 	  vec_safe_push (refs, TREE_TYPE (probe));
@@ -8691,7 +8691,6 @@ cxx_eval_constant_expression (const constexpr_ctx *ctx, tree t,
 	*jump_target = TREE_OPERAND (t, 0);
       else
 	{
-	  gcc_assert (cxx_dialect >= cxx23);
 	  if (!ctx->quiet)
 	    error_at (loc, "%<goto%> is not a constant expression");
 	  *non_constant_p = true;
